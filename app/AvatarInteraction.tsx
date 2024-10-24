@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { SimliClient } from 'simli-client';
-import VideoBox from './VideoBox';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { SimliClient } from "simli-client";
+import VideoBox from "./VideoBox";
 interface AvatarInteractionProps {
   simli_faceid: string;
   elevenlabs_voiceid: string;
@@ -17,18 +17,18 @@ interface SimliClientConfig {
   audioRef: React.RefObject<HTMLAudioElement>;
 }
 
-const simliClient = new SimliClient(); 
+const simliClient = new SimliClient();
 
 const AvatarInteraction: React.FC<AvatarInteractionProps> = ({
   simli_faceid,
   elevenlabs_voiceid,
   initialPrompt,
   onStart,
-  showDottedFace
+  showDottedFace,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isAvatarVisible, setIsAvatarVisible] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [startWebRTC, setStartWebRTC] = useState(false);
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -47,17 +47,16 @@ const AvatarInteraction: React.FC<AvatarInteractionProps> = ({
       const audioData = new Uint8Array(6000).fill(0);
       simliClient.sendAudioData(audioData);
     } catch (err) {
-      console.error('Error accessing microphone:', err);
-      setError('Error accessing microphone. Please check your permissions.');
+      console.error("Error accessing microphone:", err);
+      setError("Error accessing microphone. Please check your permissions.");
     }
-  }
-
+  };
 
   /* initializeSimliClient() initializes a new client if videoRef and audioRef are set */
   const initializeSimliClient = useCallback(() => {
     if (videoRef.current && audioRef.current) {
       const SimliConfig: SimliClientConfig = {
-        apiKey: process.env.NEXT_PUBLIC_SIMLI_API_KEY || '',
+        apiKey: process.env.NEXT_PUBLIC_SIMLI_API_KEY || "",
         faceID: simli_faceid,
         handleSilence: true,
         videoRef: videoRef,
@@ -65,26 +64,26 @@ const AvatarInteraction: React.FC<AvatarInteractionProps> = ({
       };
 
       simliClient.Initialize(SimliConfig);
-      console.log('Simli Client initialized');
+      console.log("Simli Client initialized");
     }
   }, []);
 
   /* startConversation() queries our local backend to start an elevenLabs conversation over Websockets */
   const startConversation = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:8080/start-conversation', {
-        method: 'POST',
+      const response = await fetch("http://localhost:8080/start-conversation", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           prompt: initialPrompt,
-          voiceId: elevenlabs_voiceid
+          voiceId: elevenlabs_voiceid,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to start conversation');
+        throw new Error("Failed to start conversation");
       }
 
       const data = await response.json();
@@ -94,17 +93,19 @@ const AvatarInteraction: React.FC<AvatarInteractionProps> = ({
       // After successful response, connect to WebSocket
       initializeWebSocket(data.connectionId);
     } catch (error) {
-      console.error('Error starting conversation:', error);
-      setError('Failed to start conversation. Please try again.');
+      console.error("Error starting conversation:", error);
+      setError("Failed to start conversation. Please try again.");
     }
   }, []);
 
   /* initializeWebSocket() sets up a websocket that we can use to talk to our local backend */
   const initializeWebSocket = useCallback((connectionId: string) => {
-    socketRef.current = new WebSocket(`ws://localhost:8080/ws?connectionId=${connectionId}`);
+    socketRef.current = new WebSocket(
+      `ws://localhost:8080/ws?connectionId=${connectionId}`
+    );
 
     socketRef.current.onopen = () => {
-      console.log('Connected to server');
+      console.log("Connected to server");
     };
 
     socketRef.current.onmessage = (event) => {
@@ -119,8 +120,10 @@ const AvatarInteraction: React.FC<AvatarInteractionProps> = ({
     };
 
     socketRef.current.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setError('WebSocket connection error. Please check if the server is running.');
+      console.error("WebSocket error:", error);
+      setError(
+        "WebSocket connection error. Please check if the server is running."
+      );
     };
   }, []);
 
@@ -133,31 +136,33 @@ const AvatarInteraction: React.FC<AvatarInteractionProps> = ({
     const pc = (simliClient as any).pc as RTCPeerConnection | null;
     const dc = (simliClient as any).dc as RTCDataChannel | null;
 
-    return pc !== null &&
-      pc.iceConnectionState === 'connected' &&
+    return (
+      pc !== null &&
+      pc.iceConnectionState === "connected" &&
       dc !== null &&
-      dc.readyState === 'open';
+      dc.readyState === "open"
+    );
   }, []);
   const handleCancel = useCallback(async () => {
     setIsLoading(false);
-    setError('');
+    setError("");
     setStartWebRTC(false);
     setIsRecording(false);
     setAudioStream(null);
     simliClient.close();
     socketRef.current?.close();
-    window.location.href = '/'; /* TODO: Is it bad practice to do this? Just sending user back to '/' */
+    window.location.href =
+      "/"; /* TODO: Is it bad practice to do this? Just sending user back to '/' */
   }, []);
   /* handleStart() is called when the Start button is called. It starts the websocket conversation and then checks if webRTC is connected   */
   const handleStart = useCallback(async () => {
-    startRecording();
     onStart();
     setIsLoading(true);
-    setError('');
+    setError("");
 
-    console.log('Starting ElevenLabs conversation');
+    console.log("Starting ElevenLabs conversation");
     await startConversation();
-    console.log('Starting WebRTC');
+    console.log("Starting WebRTC");
     simliClient.start();
     setStartWebRTC(true);
     /*
@@ -180,13 +185,14 @@ const AvatarInteraction: React.FC<AvatarInteractionProps> = ({
   }, []);
 
   useEffect(() => {
-    if(simliClient) {
-      simliClient.on('connected', () => {
-        console.log('SimliClient connected');
+    if (simliClient) {
+      simliClient.on("connected", () => {
+        startRecording();
+        console.log("SimliClient connected");
         setIsAvatarVisible(true);
         const audioData = new Uint8Array(6000).fill(0);
         simliClient.sendAudioData(audioData);
-        console.log('Sent initial audio data');
+        console.log("Sent initial audio data");
       });
     }
   }, [simliClient]);
@@ -203,7 +209,11 @@ const AvatarInteraction: React.FC<AvatarInteractionProps> = ({
   }, [initializeSimliClient]);
 
   useEffect(() => {
-    if (audioStream && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+    if (
+      audioStream &&
+      socketRef.current &&
+      socketRef.current.readyState === WebSocket.OPEN
+    ) {
       const mediaRecorder = new MediaRecorder(audioStream);
 
       mediaRecorder.ondataavailable = (event) => {
@@ -222,7 +232,11 @@ const AvatarInteraction: React.FC<AvatarInteractionProps> = ({
 
   return (
     <>
-      <div className={`transition-all duration-300 ${showDottedFace ? 'h-0 overflow-hidden' : 'h-auto'}`}>
+      <div
+        className={`transition-all duration-300 ${
+          showDottedFace ? "h-0 overflow-hidden" : "h-auto"
+        }`}
+      >
         <VideoBox video={videoRef} audio={audioRef} />
       </div>
       <div className="flex justify-center">
@@ -245,16 +259,15 @@ const AvatarInteraction: React.FC<AvatarInteractionProps> = ({
               Stop
             </span>
           </button>
-
         ) : (
           <button
-          onClick={handleCancel}
-          className="w-full mt-4 bg-zinc-700 text-white py-3 justify-center rounded-[100px] backdrop-blur transition-all duration-300 hover:rounded hover:bg-white hover:text-black hover:rounded-sm px-6"
-        >
-          <span className="font-abc-repro-mono font-bold w-[164px]">
-            Loading...
-          </span>
-        </button>
+            onClick={handleCancel}
+            className="w-full mt-4 bg-zinc-700 text-white py-3 justify-center rounded-[100px] backdrop-blur transition-all duration-300 hover:rounded hover:bg-white hover:text-black hover:rounded-sm px-6"
+          >
+            <span className="font-abc-repro-mono font-bold w-[164px]">
+              Loading...
+            </span>
+          </button>
         )}
       </div>
       {error && <p className="mt-4 text-red-500">{error}</p>}
